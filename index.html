@@ -22,17 +22,85 @@
   <script>
     const ws = new WebSocket("ws://localhost:8080");
 
+    ws.onconnect = () => {
+      console.log("Connected to server");
+      ws.send(JSON.stringify({
+        type: "navlink",
+        link: "https://google.com"
+      }));
+    };
+
     ws.onmessage = event => {
       const msg = JSON.parse(event.data);
 
-      if (msg.type === "dom-full") {
-        renderFullDOM(msg.tree);
+      if (msg.type === "loaded") {
+        renderFullDOM(msg.dom);
       }
 
       if (msg.type === "dom-patch") {
         applyPatches(msg.patches);
       }
     };
+
+    document.addEventListener("click", e => {
+        ws.send(JSON.stringify({
+            type: "input",
+            inputType: "click",
+            x: e.clientX,
+            y: e.clientY
+        }));
+    });
+    document.addEventListener("keydown", e => {
+        ws.send(JSON.stringify({
+            type: "input",
+            inputType: "keydown",
+            key: e.key
+        }));
+    });
+    document.addEventListener("keyup", e => {
+        ws.send(JSON.stringify({
+            type: "input",
+            inputType: "keyup",
+            key: e.key
+        }));
+    });
+    document.addEventListener("input", e => {
+        ws.send(JSON.stringify({
+            type: "input",
+            inputType: "input",
+            path:getPathToNode(e.target),
+            value: e.target.value,
+        }));
+    });
+    let lastSent = 0;
+
+    document.addEventListener("scroll", () => {
+        const now = Date.now();
+        if (now - lastSent > 30) { // send every 30ms
+            lastSent = now;
+            ws.send(JSON.stringify({
+                type: "input",
+                inputType: "scroll",
+                scrollX: window.scrollX,
+                scrollY: window.scrollY
+            }));
+        }
+    }, true);
+    document.getElementById("remote-root").addEventListener("click", e => {
+  
+        const link = e.target.closest("a");
+
+        if (link && link.href) {
+            e.preventDefault(); // stop the client from navigating
+
+            ws.send(JSON.stringify({
+                type: "navlink",
+                link: link.href
+            }));
+        }
+    });
+
+
 
     // -------------------------------
     // Build DOM from JSON tree
@@ -41,6 +109,16 @@
       const root = document.getElementById("remote-root");
       root.innerHTML = "";
       root.appendChild(buildNode(tree));
+    }
+    function getPathToNode(node) {
+        const path = [];
+        while (node && node.id !== "remote-root") {
+            const parent = node.parentNode;
+            const index = [...parent.childNodes].indexOf(node);
+            path.unshift(index);
+            node = parent;
+        }
+        return path;
     }
 
     function buildNode(node) {
