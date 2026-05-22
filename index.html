@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Remote Browser Client</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+    }
+    #remote-root {
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- This is where the remote DOM will be rendered -->
+  <div id="remote-root"></div>
+
+  <script>
+    const ws = new WebSocket("ws://localhost:8080");
+
+    ws.onmessage = event => {
+      const msg = JSON.parse(event.data);
+
+      if (msg.type === "dom-full") {
+        renderFullDOM(msg.tree);
+      }
+
+      if (msg.type === "dom-patch") {
+        applyPatches(msg.patches);
+      }
+    };
+
+    // -------------------------------
+    // Build DOM from JSON tree
+    // -------------------------------
+    function renderFullDOM(tree) {
+      const root = document.getElementById("remote-root");
+      root.innerHTML = "";
+      root.appendChild(buildNode(tree));
+    }
+
+    function buildNode(node) {
+      if (node.text !== null) {
+        return document.createTextNode(node.text);
+      }
+
+      const el = document.createElement(node.tag);
+
+      for (const [name, value] of Object.entries(node.attrs)) {
+        el.setAttribute(name, value);
+      }
+
+      for (const child of node.children) {
+        el.appendChild(buildNode(child));
+      }
+
+      return el;
+    }
+
+    // -------------------------------
+    // Apply patches
+    // -------------------------------
+    function applyPatches(patches) {
+      for (const patch of patches) {
+        const node = getNodeByPath(patch.path);
+
+        switch (patch.type) {
+          case "SET_TEXT":
+            node.textContent = patch.text;
+            break;
+
+          case "SET_ATTRIBUTE":
+            node.setAttribute(patch.name, patch.value);
+            break;
+
+          case "REMOVE_ATTRIBUTE":
+            node.removeAttribute(patch.name);
+            break;
+
+          case "REPLACE_NODE":
+            node.replaceWith(buildNode(patch.node));
+            break;
+
+          case "INSERT_CHILD":
+            node.appendChild(buildNode(patch.node));
+            break;
+
+          case "REMOVE_CHILD":
+            node.removeChild(node.childNodes[patch.index]);
+            break;
+        }
+      }
+    }
+
+    // -------------------------------
+    // Locate node by path
+    // -------------------------------
+    function getNodeByPath(path) {
+      let node = document.getElementById("remote-root");
+
+      for (const index of path) {
+        node = node.childNodes[index];
+      }
+
+      return node;
+    }
+  </script>
+
+</body>
+</html>
