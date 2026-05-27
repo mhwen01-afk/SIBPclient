@@ -35,7 +35,7 @@
       const msg = JSON.parse(event.data);
 
       if (msg.type === "loaded") {
-        renderFullDOM(msg.dom);
+        renderFullDOM({msg.domhead, msg.dombody});
       }
 
       if (msg.type === "dom-patch") {
@@ -106,11 +106,31 @@
     // -------------------------------
     // Build DOM from JSON tree
     // -------------------------------
-    function renderFullDOM(tree) {
+    function renderFullDOM({ head, body }) {
+    // Inject head into document.head
+    document.head.innerHTML = "";
+    if (head) {
+        for (const child of head.children) {
+            document.head.appendChild(buildNode(child));
+        }
+    }
+
       const root = document.getElementById("remote-root");
       root.innerHTML = "";
-      root.appendChild(buildNode(tree));
+      root.appendChild(buildNode(body));
     }
+
+  function buildNode(node) {
+    if (node.type === "text") return document.createTextNode(node.text);
+    const el = document.createElement(node.tag);
+    for (const [name, value] of Object.entries(node.attrs)) {
+        try { el.setAttribute(name, value); } catch {}
+    }
+    for (const child of node.children) {
+        el.appendChild(buildNode(child));
+    }
+    return el;
+  }
     function getPathToNode(node) {
         const path = [];
         while (node && node.id !== "remote-root") {
@@ -122,24 +142,7 @@
         return path;
     }
 
-    function buildNode(node) {
-      if (node.text !== null) {
-        return document.createTextNode(node.text);
-      }
-
-      const el = document.createElement(node.tag);
-
-      for (const [name, value] of Object.entries(node.attrs)) {
-        el.setAttribute(name, value);
-      }
-
-      for (const child of node.children) {
-        el.appendChild(buildNode(child));
-      }
-
-      return el;
-    }
-
+    
     // -------------------------------
     // Apply patches
     // -------------------------------
