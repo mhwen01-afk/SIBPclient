@@ -107,30 +107,32 @@
     // Build DOM from JSON tree
     // -------------------------------
     function renderFullDOM({ head, body }) {
-    // Inject head into document.head
     document.head.innerHTML = "";
     if (head) {
-        for (const child of head.children) {
+        for (const child of head.children ?? []) {
+            if (!child) continue; // ← skip null/undefined entries
             document.head.appendChild(buildNode(child));
         }
     }
 
-      const root = document.getElementById("remote-root");
-      root.innerHTML = "";
-      root.appendChild(buildNode(body));
+    const root = document.getElementById("remote-root");
+    root.innerHTML = "";
+    if (body) root.appendChild(buildNode(body));
     }
-
-  function buildNode(node) {
-    if (node.type === "text") return document.createTextNode(node.text);
+  
+function buildNode(node) {
+    if (!node) return document.createTextNode(""); // ← guard at the top
+    if (node.type === "text") return document.createTextNode(node.text ?? "");
     const el = document.createElement(node.tag);
-    for (const [name, value] of Object.entries(node.attrs)) {
+    for (const [name, value] of Object.entries(node.attrs ?? {})) {
         try { el.setAttribute(name, value); } catch {}
     }
-    for (const child of node.children) {
+    for (const child of node.children ?? []) {
+        if (!child) continue;
         el.appendChild(buildNode(child));
     }
     return el;
-  }
+}
     function getPathToNode(node) {
         const path = [];
         while (node && node.id !== "remote-root") {
