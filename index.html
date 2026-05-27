@@ -35,7 +35,7 @@
       const msg = JSON.parse(event.data);
 
       if (msg.type === "loaded") {
-        renderFullDOM({msg.domhead, msg.dombody});
+        renderFullDOM({ head: msg.head, body: msg.body });
       }
 
       if (msg.type === "dom-patch") {
