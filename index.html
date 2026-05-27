@@ -22,7 +22,7 @@
   <script>
     const ws = new WebSocket("wss://sibp.onrender.com");
 
-    ws.onconnect = () => {
+    ws.onopen = () => {
       console.log("Connected to server");
       ws.send(JSON.stringify({
         type: "navlink",
