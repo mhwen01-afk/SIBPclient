@@ -32,10 +32,11 @@
     };
 
     ws.onmessage = event => {
-      console.log("Message Received");
+
       const msg = JSON.parse(event.data);
 
       if (msg.type === "frame") {
+        console.log(typeof msg.data, msg.data.slice(0, 50));
         document.getElementById("screen").src = `data:image/jpeg;base64,${msg.data}`;
       }
     };
