@@ -101,6 +101,19 @@
             }));
         }
     });
+    // Intercept link clicks
+    document.getElementById("remote-root").addEventListener("click", e => {
+      const link = e.target.closest("a");
+      if (link && link.href) {
+        e.preventDefault();
+        ws.send(JSON.stringify({ type: "navlink", link: link.href }));
+      }
+    });
+
+    // Intercept form submissions (covers search buttons, login forms, etc.)
+    document.getElementById("remote-root").addEventListener("submit", e => {
+      e.preventDefault();
+    }, true); // ← capture phase so it fires before the form submits
 
 
 
