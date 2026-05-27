@@ -9,15 +9,15 @@
       padding: 0;
       font-family: sans-serif;
     }
-    #remote-root {
-      padding: 10px;
-    }
+    
   </style>
 </head>
 <body>
 
   <!-- This is where the remote DOM will be rendered -->
-  <div id="remote-root"></div>
+  
+  
+  <img id="screen" style="width:100%; display:block;" />
 
   <script>
     const ws = new WebSocket("wss://sibp.onrender.com");
@@ -35,13 +35,8 @@
       console.log("Message Received");
       const msg = JSON.parse(event.data);
 
-      if (msg.type === "loaded") {
-        if(!msg.body) return;
-        renderFullDOM({ head: msg.head, body: msg.body });
-      }
-
-      if (msg.type === "dom-patch") {
-        applyPatches(msg.patches);
+      if (msg.type === "frame") {
+        document.getElementById("screen").src = `data:image/jpeg;base64,${msg.data}`;
       }
     };
 
@@ -67,16 +62,8 @@
             key: e.key
         }));
     });
-    document.addEventListener("input", e => {
-        ws.send(JSON.stringify({
-            type: "input",
-            inputType: "input",
-            path:getPathToNode(e.target),
-            value: e.target.value,
-        }));
-    });
+  
     let lastSent = 0;
-
     document.addEventListener("scroll", () => {
         const now = Date.now();
         if (now - lastSent > 30) { // send every 30ms
@@ -89,124 +76,18 @@
             }));
         }
     }, true);
-    document.getElementById("remote-root").addEventListener("click", e => {
-  
-        const link = e.target.closest("a");
-
-        if (link && link.href) {
-            e.preventDefault(); // stop the client from navigating
-
-            ws.send(JSON.stringify({
-                type: "navlink",
-                link: link.href
-            }));
-        }
-    });
+    
     // Intercept link clicks
-    document.getElementById("remote-root").addEventListener("click", e => {
-      const link = e.target.closest("a");
-      if (link && link.href) {
-        e.preventDefault();
-        ws.send(JSON.stringify({ type: "navlink", link: link.href }));
-      }
-    });
-
+    
     // Intercept form submissions (covers search buttons, login forms, etc.)
-    document.getElementById("remote-root").addEventListener("submit", e => {
-      e.preventDefault();
-    }, true); // ← capture phase so it fires before the form submits
+    
 
 
 
     // -------------------------------
     // Build DOM from JSON tree
     // -------------------------------
-    function renderFullDOM({ head, body }) {
-    document.head.innerHTML = "";
-    if (head) {
-        for (const child of head.children ?? []) {
-            if (!child) continue; // ← skip null/undefined entries
-            document.head.appendChild(buildNode(child));
-        }
-    }
-
-    const root = document.getElementById("remote-root");
-    root.innerHTML = "";
-    if (body) root.appendChild(buildNode(body));
-    }
-  
-function buildNode(node) {
-    if (!node) return document.createTextNode(""); // ← guard at the top
-    if (node.type === "text") return document.createTextNode(node.text ?? "");
-    const el = document.createElement(node.tag);
-    for (const [name, value] of Object.entries(node.attrs ?? {})) {
-        try { el.setAttribute(name, value); } catch {}
-    }
-    for (const child of node.children ?? []) {
-        if (!child) continue;
-        el.appendChild(buildNode(child));
-    }
-    return el;
-}
-    function getPathToNode(node) {
-        const path = [];
-        while (node && node.id !== "remote-root") {
-            const parent = node.parentNode;
-            const index = [...parent.childNodes].indexOf(node);
-            path.unshift(index);
-            node = parent;
-        }
-        return path;
-    }
-
     
-    // -------------------------------
-    // Apply patches
-    // -------------------------------
-    function applyPatches(patches) {
-      for (const patch of patches) {
-        const node = getNodeByPath(patch.path);
-
-        switch (patch.type) {
-          case "SET_TEXT":
-            node.textContent = patch.text;
-            break;
-
-          case "SET_ATTRIBUTE":
-            node.setAttribute(patch.name, patch.value);
-            break;
-
-          case "REMOVE_ATTRIBUTE":
-            node.removeAttribute(patch.name);
-            break;
-
-          case "REPLACE_NODE":
-            node.replaceWith(buildNode(patch.node));
-            break;
-
-          case "INSERT_CHILD":
-            node.appendChild(buildNode(patch.node));
-            break;
-
-          case "REMOVE_CHILD":
-            node.removeChild(node.childNodes[patch.index]);
-            break;
-        }
-      }
-    }
-
-    // -------------------------------
-    // Locate node by path
-    // -------------------------------
-    function getNodeByPath(path) {
-      let node = document.getElementById("remote-root");
-
-      for (const index of path) {
-        node = node.childNodes[index];
-      }
-
-      return node;
-    }
   </script>
 
 </body>
