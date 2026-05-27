@@ -48,6 +48,7 @@
             x: e.clientX,
             y: e.clientY
         }));
+        console.log("clicked X: " + e.clientX + ", Y: " + e.clientY); 
     });
     document.addEventListener("keydown", e => {
         ws.send(JSON.stringify({
@@ -55,6 +56,7 @@
             inputType: "keydown",
             key: e.key
         }));
+      console.log("Keydown: ", e.key);
     });
     document.addEventListener("keyup", e => {
         ws.send(JSON.stringify({
@@ -62,6 +64,7 @@
             inputType: "keyup",
             key: e.key
         }));
+      console.log("Keyup: ", e.key);
     });
   
     let lastSent = 0;
@@ -75,6 +78,7 @@
                 scrollX: window.scrollX,
                 scrollY: window.scrollY
             }));
+          console.log("scroll log");
         }
     }, true);
     
